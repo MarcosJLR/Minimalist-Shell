@@ -4,6 +4,30 @@
 #include <string.h>
 #include <errno.h>
 
+void execCommandR(char *cmd, char *rest, int inputFD){
+	char *nextCmd = strtok_r(rest, "|", &rest);
+	if(nextCmd){
+		int fd[2];
+		pipe(fd);
+		if(fork() == 0){
+
+		}
+		if(inputFD != STDIN_FILENO) 
+			close(inputFD);
+		close(fd[1]);
+
+		execCommandR(nextCmd, rest, fd[0]);
+	}
+	else{
+
+	}
+}
+
+void execCommand(char *cmd){
+	char *firstCmd = strtok_r(cmd, "|", &cmd);
+	execCommandR(firstCmd, cmd, STDIN_FILENO);
+}
+
 int main(int argc, char ** argv){
 	char prompt[15];
 	size_t len = 0:
@@ -23,9 +47,14 @@ int main(int argc, char ** argv){
 
 	while(1){
 		printf("%s", prompt);
+		
 		if(getline(&cmd, &len, input) == -1)
 			break;
-		
+
+		if(strcmp(cmd, "exit"))
+			execCommand(cmd);
+		else
+			break;
 	}
 
 	return 0;
