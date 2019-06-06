@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 
 int splitStr(char *s, const char *delim, char ***splitArr){
 	int cnt = 0, n = strlen(s);
@@ -16,7 +17,7 @@ int splitStr(char *s, const char *delim, char ***splitArr){
 	arr[0] = strtok(s, delim);
 
 	for(int i = 1; i < cnt + 1; i++){
-		arr[i] = strtok(NULL, " \n");
+		arr[i] = strtok(NULL, delim);
 		if(arr[i] == NULL) break;
 	}
 
@@ -25,36 +26,99 @@ int splitStr(char *s, const char *delim, char ***splitArr){
 	return cnt;
 }
 
+void trimStr(char *s){
+	int i,j,n = strlen(s);
+	
+	for(i = 0; isspace(s[i]); i++);
+	
+	for(j = n-1; isspace(s[i]); j--);
+	
+	for(int k = i; k <= j; k++)
+		s[k-i] = s[k];
+	
+	s[j+1] = '\0';
+}
+
+void getIOFiles(char *cmd, char *in, char *out){
+	int n = strlen(cmd);
+	int inPos = -1, outPos = -1;
+	in[0] = out[0] = '\0';
+	for(int i = 0; i < n; i++){
+		if(s[i] == '<'){ 
+			if(outPos != -1)
+				out[outPos] = '\0';
+			inPos = 0;
+			outPos = -1;
+		}
+		else if(s[i] == '>'){
+			if(inPos != -1)
+				in[inPos] = '\0';
+			inPos = -1;
+			outPos = 0;
+		}
+		else{
+			if(inPos != -1)
+				in[inPos++] = s[i];
+			else if(outPos != -1)
+				out[outPos++] = s[i];
+		}
+	}
+	
+	if(inPos != -1)
+		in[inPos] = '\0';
+	if(outPos != -1)
+		out[outPos] = '\0';
+
+	trim(in);
+	trim(out);
+}
+
 void execCommand(char *cmd, int inFD, int outFD){
+	if(fork() == 0){
+		char inFile[PATH_MAX], outFile[PATH_MAX];
+		char *realCmd = strtok(cmd, "<>");
+		char **argv = NULL;
 
-}
+		getIOFiles(cmd, inFile, outFile);
+		if(inFile[0] != '\0'){
+			FILE *in = fopen(inFile, "r");
+			inFD = fileno(in);
+		}
+		if(outFile[0] != '\0'){
+			FILE *out = fopen(outFile, "w");
+			outFD = fileno(out);
+		}
+		dup2(inFD, STDIN_FILENO);
+		dup2(outFD, STDOUT_FILENO);
 
-int execCommandLineR(char *cmd, char *rest, int inputFD){
-	if(cmd == NULL) return;
+		splitStr(realCmd, " \n", &argv);
 
-	char *nextCmd = strtok_r(rest, "|", &rest);
-	if(nextCmd){ 
-		int fd[2], ret;
-		pipe(fd);
 		
-		execCommand(cmd, inputFD, fd[1]);
-
-		ret = execCommandLineR(nextCmd, rest, fd[0]);
-
-		free(nextCmd);
-
-		return ret + 1;
-	}
-	else{
-		execCommand(cmd, inputFD, STDOUT_FILENO);
-		
-		return 1;
 	}
 }
 
-int execCommandLine(char *cmd){
-	char *firstCmd = strtok_r(cmd, "|", &cmd);
-	return execCommandLineR(firstCmd, cmd, STDIN_FILENO);
+void execCommandLine(char *cmd){
+	char **arr = NULL;
+	int n = splitStr(cmd, "|", &arr);
+	int inputFD = STDIN_FILENO;
+
+	for(int i = 0; i < n; i++){
+		if(i == n-1)
+			execCommand(arr[i], inputFD, STDOUT_FILENO);
+		else{
+			int fd[2];
+			pipe(fd);
+			execCommand(arr[i], inputFD, fd[1]);
+			close(fd[1]);
+			inputFD = fd[0];
+		}
+
+		if(inputFD != STDIN_FILENO)
+			close(inputFD);
+	}
+
+	for(int i = 0; i < n; i++)
+		wait(NULL);
 }
 
 int main(int argc, char ** argv){
