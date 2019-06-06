@@ -4,8 +4,12 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <limits.h>
+#include <sys/wait.h>
 
 int splitStr(char *s, const char *delim, char ***splitArr){
+	if(s == NULL) return 0;
+
 	int cnt = 0, n = strlen(s);
 	
 	for(int i = 0; i < n; i++)
@@ -28,29 +32,32 @@ int splitStr(char *s, const char *delim, char ***splitArr){
 
 void trimStr(char *s){
 	int i,j,n = strlen(s);
+
+	if(n == 0) return;
+
+	for(i = 0; isspace((unsigned char) s[i]); i++);
 	
-	for(i = 0; isspace(s[i]); i++);
-	
-	for(j = n-1; isspace(s[i]); j--);
+	for(j = n-1; isspace((unsigned char) s[i]); j--);
 	
 	for(int k = i; k <= j; k++)
 		s[k-i] = s[k];
 	
-	s[j+1] = '\0';
+	s[j-i] = '\0';
 }
 
 void getIOFiles(char *cmd, char *in, char *out){
 	int n = strlen(cmd);
 	int inPos = -1, outPos = -1;
 	in[0] = out[0] = '\0';
+
 	for(int i = 0; i < n; i++){
-		if(s[i] == '<'){ 
+		if(cmd[i] == '<'){ 
 			if(outPos != -1)
 				out[outPos] = '\0';
 			inPos = 0;
 			outPos = -1;
 		}
-		else if(s[i] == '>'){
+		else if(cmd[i] == '>'){
 			if(inPos != -1)
 				in[inPos] = '\0';
 			inPos = -1;
@@ -58,9 +65,9 @@ void getIOFiles(char *cmd, char *in, char *out){
 		}
 		else{
 			if(inPos != -1)
-				in[inPos++] = s[i];
+				in[inPos++] = cmd[i];
 			else if(outPos != -1)
-				out[outPos++] = s[i];
+				out[outPos++] = cmd[i];
 		}
 	}
 	
@@ -69,17 +76,18 @@ void getIOFiles(char *cmd, char *in, char *out){
 	if(outPos != -1)
 		out[outPos] = '\0';
 
-	trim(in);
-	trim(out);
+	trimStr(in);
+	trimStr(out);
 }
 
 void execCommand(char *cmd, int inFD, int outFD){
 	if(fork() == 0){
 		char inFile[PATH_MAX], outFile[PATH_MAX];
+		getIOFiles(cmd, inFile, outFile);
+
 		char *realCmd = strtok(cmd, "<>");
 		char **argv = NULL;
 
-		getIOFiles(cmd, inFile, outFile);
 		if(inFile[0] != '\0'){
 			FILE *in = fopen(inFile, "r");
 			inFD = fileno(in);
@@ -88,42 +96,68 @@ void execCommand(char *cmd, int inFD, int outFD){
 			FILE *out = fopen(outFile, "w");
 			outFD = fileno(out);
 		}
+
 		dup2(inFD, STDIN_FILENO);
 		dup2(outFD, STDOUT_FILENO);
 
-		splitStr(realCmd, " \n", &argv);
+		if(splitStr(realCmd, " \n", &argv) == 0){
+			exit(0);
+		}
 
-		
+		if(strcmp(argv[0], "ls") == 0){
+			char aux[] = "./myls";
+			argv[0] = aux;
+			execvp(argv[0], argv);
+		}
+		else if(strcmp(argv[0], "grep") == 0){
+			char aux[] = "./mygrep";
+			argv[0] = aux;
+			execvp(argv[0], argv);
+		}
+		else if(strcmp(argv[0], "chmod") == 0){
+			char aux[] = "./mychmod";
+			argv[0] = aux;
+			execvp(argv[0], argv);
+		} 
+		else{
+			fprintf(stderr, "tesh: %s: command not found\n", argv[0]);
+			exit(0);
+		}
+
+		exit(0);
 	}
+	else
+		wait(NULL);
 }
 
 void execCommandLine(char *cmd){
 	char **arr = NULL;
 	int n = splitStr(cmd, "|", &arr);
 	int inputFD = STDIN_FILENO;
-
 	for(int i = 0; i < n; i++){
-		if(i == n-1)
+		if(i == n-1){
 			execCommand(arr[i], inputFD, STDOUT_FILENO);
+			if(inputFD != STDIN_FILENO)
+				close(inputFD);
+		}
 		else{
 			int fd[2];
 			pipe(fd);
 			execCommand(arr[i], inputFD, fd[1]);
+			
+			if(inputFD != STDIN_FILENO)
+				close(inputFD);
+			
 			close(fd[1]);
+			
 			inputFD = fd[0];
-		}
-
-		if(inputFD != STDIN_FILENO)
-			close(inputFD);
+		}		
 	}
-
-	for(int i = 0; i < n; i++)
-		wait(NULL);
 }
 
 int main(int argc, char ** argv){
 	char prompt[15];
-	size_t len = 0:
+	size_t len = 0;
 	char *cmd = NULL;
 	FILE *input = stdin;
 
@@ -144,7 +178,7 @@ int main(int argc, char ** argv){
 		if(getline(&cmd, &len, input) == -1)
 			break;
 
-		if(strcmp(cmd, "exit"))
+		if(strcmp(cmd, "exit\n"))
 			execCommandLine(cmd);
 		else
 			break;
