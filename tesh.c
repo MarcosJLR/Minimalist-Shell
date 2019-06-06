@@ -4,28 +4,49 @@
 #include <string.h>
 #include <errno.h>
 
-void execCommandR(char *cmd, char *rest, int inputFD){
-	char *nextCmd = strtok_r(rest, "|", &rest);
-	if(nextCmd){
-		int fd[2];
-		pipe(fd);
-		if(fork() == 0){
+char **splitStr(char *s){
+	int cnt = 0, n = strlen(s);
+	for(int i = 0; i < n; i++)
+		if(s[i] != ' ' && s[i] != '\n' && (i == 0 || s[i-1] == ' '))
+			cnt++;
+	
+	char **arr = malloc((cnt + 1) * sizeof(char *));
 
-		}
-		if(inputFD != STDIN_FILENO) 
-			close(inputFD);
-		close(fd[1]);
+	arr[0] = strtok(s, " \n");
 
-		execCommandR(nextCmd, rest, fd[0]);
+	for(int i = 1; i < cnt + 1; i++){
+		arr[i] = strtok(NULL, " \n");
+		if(arr[i] == NULL) break;
 	}
-	else{
 
-	}
+	return arr;
 }
 
-void execCommand(char *cmd){
+void execCommand(char *cmd, int inFD, int outFD){
+
+}
+
+void execCommandLineR(char *cmd, char *rest, int inputFD){
+	if(cmd == NULL) return;
+
+	char *nextCmd = strtok_r(rest, "|", &rest);
+	if(nextCmd){ 
+		int fd[2];
+		pipe(fd);
+		
+		execCommand(cmd, inputFD, fd[1]);
+
+		execCommandLineR(nextCmd, rest, fd[0]);
+
+		free(nextCmd);
+	}
+	else
+		execCommand(cmd, inputFD, STDOUT_FILENO);
+}
+
+void execCommandLine(char *cmd){
 	char *firstCmd = strtok_r(cmd, "|", &cmd);
-	execCommandR(firstCmd, cmd, STDIN_FILENO);
+	execCommandLineR(firstCmd, cmd, STDIN_FILENO);
 }
 
 int main(int argc, char ** argv){
@@ -52,7 +73,7 @@ int main(int argc, char ** argv){
 			break;
 
 		if(strcmp(cmd, "exit"))
-			execCommand(cmd);
+			execCommandLine(cmd);
 		else
 			break;
 	}
