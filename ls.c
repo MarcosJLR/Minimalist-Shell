@@ -32,62 +32,64 @@ void listFiles(char *path, int depth, int flag[6]){
 			strcpy(aux,path);
 			strcat(aux,ent->d_name);
 			if(stat(aux,&fileStat) < 0){
-				perror("Problema abriendo archivo");
-				return 1;
-			}
-			if(flag[0]){
-				printf("%d\t",fileStat.st_ino);
-			}
-
-			printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
-			printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
-			printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
-			printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
-			printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
-			printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
-			printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
-			printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
-			printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
-			printf( (fileStat.st_mode & S_IXOTH) ? "x\t" : "-\t");
-
-			printf("%d\t",fileStat.st_nlink);
-			
-			if(!flag[2]){
-				struct passwd *us = getpwuid(fileStat.st_uid);
-				printf("%s\t",us->pw_name);
-			}
-			if(!flag[1]){
-				struct group *gr = getgrgid(fileStat.st_gid);
-				printf("%s\t",gr->gr_name);
-			}
-
-			if(flag[3]){
-				if(fileStat.st_size<1024){
-					printf("%d\t",fileStat.st_size);
-				}
-				else if(fileStat.st_size>800*1024){
-					double sz=(float)fileStat.st_size/(1024*1024);
-					printf("%0.1lfM\t",sz);
-				}
-				else{
-					double sz=(float)fileStat.st_size/1024;
-					printf("%0.1lfK\t",sz);
-				}
+				printf("Problema abriendo archivo %s",ent->d_name);
+				perror("stat()");
 			}
 			else{
-				printf("%d\t",fileStat.st_size);
-			}
+				if(flag[0]){
+					printf("%d\t",fileStat.st_ino);
+				}
 
-			struct tm *time=localtime(&fileStat.st_mtim);
-			int year=1900+time->tm_year;
-			int month=1+time->tm_mon;
-			printf("%d/%d/%d\t%d:%d\t",year,month,time->tm_mday,time->tm_hour,time->tm_min);			
+				printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
+				printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
+				printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
+				printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
+				printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
+				printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
+				printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
+				printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
+				printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
+				printf( (fileStat.st_mode & S_IXOTH) ? "x\t" : "-\t");
 
-			printf("%s\n",ent->d_name);
-			if(ent->d_type == DT_DIR && flag[4])
-			{
-				sprintf(dir[i], "%s%s/", path, ent->d_name);
-				i++;
+				printf("%d\t",fileStat.st_nlink);
+				
+				if(!flag[2]){
+					struct passwd *us = getpwuid(fileStat.st_uid);
+					printf("%s\t",us->pw_name);
+				}
+				if(!flag[1]){
+					struct group *gr = getgrgid(fileStat.st_gid);
+					printf("%s\t",gr->gr_name);
+				}
+
+				if(flag[3]){
+					if(fileStat.st_size<1024){
+						printf("%d\t",fileStat.st_size);
+					}
+					else if(fileStat.st_size>800*1024){
+						double sz=(float)fileStat.st_size/(1024*1024);
+						printf("%0.1lfM\t",sz);
+					}
+					else{
+						double sz=(float)fileStat.st_size/1024;
+						printf("%0.1lfK\t",sz);
+					}
+				}
+				else{
+					printf("%d\t",fileStat.st_size);
+				}
+
+				struct tm *time=localtime(&fileStat.st_mtim);
+				int year=1900+time->tm_year;
+				int month=1+time->tm_mon;
+				printf("%d/%d/%d\t%d:%d\t",year,month,time->tm_mday,time->tm_hour,time->tm_min);			
+
+				printf("%s\n",ent->d_name);
+				if(ent->d_type == DT_DIR && flag[4])
+				{
+					sprintf(dir[i], "%s%s/", path, ent->d_name);
+					i++;
+				}
 			}
 		}
 	}
@@ -121,6 +123,10 @@ int main(int argc, char **argv)
 		else if(argv[i][0]=='/' || argv[i][0]=='~'){
 			strcpy(dir[j],argv[i]);
 			j++;
+		}
+		else{
+			strcpy(dir[j],"/");
+			strcpy(dir[j],argv[i]);
 		}
 	}
 	if(j==0){
