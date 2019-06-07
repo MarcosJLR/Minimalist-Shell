@@ -48,21 +48,27 @@ int main(int argc, char **argv){
 		else{
 			if(flag[0] && !flag[1]){
 				chmod(files[i], fileStat.st_mode | S_IRUSR | S_IRGRP | S_IROTH);
+				stat(files[i],&fileStat);
 			}
 			if(!flag[0] && flag[1]){
 				chmod(files[i], fileStat.st_mode & ~S_IRUSR & ~S_IRGRP & ~S_IROTH);
+				stat(files[i],&fileStat);
 			}
 			if(flag[2] && !flag[3]){
 				chmod(files[i], fileStat.st_mode | S_IWUSR | S_IWGRP | S_IWOTH);
+				stat(files[i],&fileStat);
 			}
 			if(!flag[2] && flag[3]){
 				chmod(files[i], fileStat.st_mode & ~S_IWUSR & ~S_IWGRP & ~S_IWOTH);
+				stat(files[i],&fileStat);
 			}
 			if(flag[4] && !flag[5]){
 				chmod(files[i], fileStat.st_mode | S_IXUSR | S_IXGRP | S_IXOTH);
+				stat(files[i],&fileStat);
 			}
 			if(!flag[4] && flag[5]){
 				chmod(files[i], fileStat.st_mode & ~S_IXUSR & ~S_IXGRP & ~S_IXOTH);
+				stat(files[i],&fileStat);
 			}
 		}
 	}
