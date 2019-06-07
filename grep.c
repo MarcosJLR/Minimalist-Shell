@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/file.h>
@@ -36,8 +38,9 @@ int main(int argc, char **argv){
 
 	}
 	if(j==0){
-		char input[MAX];
-		while(fgets(input,MAX,stdin)>0){
+		char *input = NULL;
+		size_t len = 0;
+		while(getline(&input, &len, stdin) != -1){
 			if(flag[0]){
 				if(strcasestr(input,search)>0){
 					if(!flag[1]) printf("%s",input);
@@ -54,11 +57,11 @@ int main(int argc, char **argv){
 	}
 	else{
 		FILE *file;
-		char line[MAX];
-		size_t len= MAX;
+		char *line = NULL;
+		size_t len = 0;
 		for(i=0;i<j;i++){
 			file=fopen(files[i], "r");
-			while(fgets(line,MAX,file)>0){
+			while(getline(&line, &len, file) != -1){
 				if(flag[0]){
 					if(strcasestr(line,search)>0){
 						if(!flag[1]){
@@ -84,6 +87,7 @@ int main(int argc, char **argv){
 					}
 				}
 			}
+			fclose(file);
 		}
 	}
 }
