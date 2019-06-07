@@ -7,21 +7,20 @@
 #include <grp.h>
 #include <errno.h>
 #include <time.h>
-
-#define MAX_PATH (1<<10)
-
+#include <limits.h>
+#include <unistd.h>
 
 
 void listFiles(char *path, int depth, int flag[6]){
 	DIR *direc;
 	direc = opendir(path);
 	if(direc == NULL){
-		printf("Failed at opening path: %s\n",path);
+		fprintf(stderr, "Failed at opening path: %s\n",path);
 		return;
 	}
 	struct dirent *ent;
-	char dir[100][MAX_PATH];
-	char aux[MAX_PATH];
+	char dir[100][PATH_MAX];
+	char aux[PATH_MAX];
 	struct stat fileStat;
 	int i=0;
 	if(flag[5] || flag[4]){
@@ -32,12 +31,12 @@ void listFiles(char *path, int depth, int flag[6]){
 			strcpy(aux,path);
 			strcat(aux,ent->d_name);
 			if(stat(aux,&fileStat) < 0){
-				printf("Problema abriendo archivo %s",ent->d_name);
+				fprintf(stderr, "Problema abriendo archivo %s\n",ent->d_name);
 				perror("stat()");
 			}
 			else{
 				if(flag[0]){
-					printf("%d\t",fileStat.st_ino);
+					printf("%lu\t",fileStat.st_ino);
 				}
 
 				printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
@@ -51,7 +50,7 @@ void listFiles(char *path, int depth, int flag[6]){
 				printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
 				printf( (fileStat.st_mode & S_IXOTH) ? "x\t" : "-\t");
 
-				printf("%d\t",fileStat.st_nlink);
+				printf("%lu\t",fileStat.st_nlink);
 				
 				if(!flag[2]){
 					struct passwd *us = getpwuid(fileStat.st_uid);
@@ -64,7 +63,7 @@ void listFiles(char *path, int depth, int flag[6]){
 
 				if(flag[3]){
 					if(fileStat.st_size<1024){
-						printf("%d\t",fileStat.st_size);
+						printf("%ld\t",fileStat.st_size);
 					}
 					else if(fileStat.st_size>800*1024){
 						double sz=(float)fileStat.st_size/(1024*1024);
@@ -76,10 +75,10 @@ void listFiles(char *path, int depth, int flag[6]){
 					}
 				}
 				else{
-					printf("%d\t",fileStat.st_size);
+					printf("%ld\t",fileStat.st_size);
 				}
 
-				struct tm *time=localtime(&fileStat.st_mtim);
+				struct tm *time=localtime(&(fileStat.st_mtim.tv_sec));
 				int year=1900+time->tm_year;
 				int month=1+time->tm_mon;
 				printf("%d/%d/%d\t%d:%d\t",year,month,time->tm_mday,time->tm_hour,time->tm_min);			
@@ -125,8 +124,9 @@ int main(int argc, char **argv)
 			j++;
 		}
 		else{
-			strcpy(dir[j],"/");
+			//strcpy(dir[j],"/");
 			strcpy(dir[j],argv[i]);
+			j++;
 		}
 	}
 	if(j==0){
