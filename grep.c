@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv){
 	if(argc<2){
-		printf("No se dio string a buscar.\n");
+		fprintf(stderr, "No se dio string a buscar.\n");
 		return 1;
 	}
 	char search[MAX];

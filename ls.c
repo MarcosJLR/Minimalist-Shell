@@ -15,7 +15,7 @@ void listFiles(char *path, int depth, int flag[6]){
 	DIR *direc;
 	direc = opendir(path);
 	if(direc == NULL){
-		printf("Failed at opening path: %s\n",path);
+		fprintf(stderr, "Failed at opening path: %s\n",path);
 		return;
 	}
 	struct dirent *ent;
@@ -31,7 +31,7 @@ void listFiles(char *path, int depth, int flag[6]){
 			strcpy(aux,path);
 			strcat(aux,ent->d_name);
 			if(stat(aux,&fileStat) < 0){
-				printf("Problema abriendo archivo %s",ent->d_name);
+				fprintf(stderr, "Problema abriendo archivo %s\n",ent->d_name);
 				perror("stat()");
 			}
 			else{
@@ -124,8 +124,9 @@ int main(int argc, char **argv)
 			j++;
 		}
 		else{
-			strcpy(dir[j],"/");
+			//strcpy(dir[j],"/");
 			strcpy(dir[j],argv[i]);
+			j++;
 		}
 	}
 	if(j==0){
